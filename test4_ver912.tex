@@ -180,6 +180,15 @@ In this work, we characterize radio morphologies by fitting ellipses that nearly
 
 Starting from the preprocessed images, we apply thresholding, flood-filling, principal-component analysis (PCA), contour processing, and skeletonization to derive the ellipse and centreline. The FRI and FRII branches use different criteria when selecting and cleaning the initial radio regions, because FRIs are generally dominated by emission near the host whereas FRIIs are commonly separated into two lobe-like regions. After this class-dependent selection, both branches follow the same host-centred geometric procedure.
 
+The overall architecture is summarized in \autoref{fig:ProgramArchitecture}. The pipeline proceeds in four stages. First, the radio images, FRI/FRII class lists, host positions, and source catalogues form the input. Second, image-domain processing extracts the candidate emission, determines the principal direction by PCA, fits the enclosing ellipse, and thins the accepted mask into a host-centred centreline. Third, calibrated survey images provide flux density and luminosity, while cross-matched optical catalogues provide redshift, black-hole mass, and stellar mass; joint checks of image geometry, physical measurements, optical information, and redshift are then applied. Fourth, the matched measurement tables, centreline profiles, morphology statistics, and inspection images form the outputs, with unavailable values retained as missing rather than imputed. The bottom audit band summarizes the source-level filtering from the initial 495 FRI and 924 FRII candidates to the final working samples of 379 FRIs and 547 FRIIs; the intermediate rejection counts are diagnostic records and may overlap, as detailed in \autoref{sec:sample_filtering}.
+
+\begin{figure*}[!htbp]
+    \centering
+    \includegraphics[width=0.72\linewidth]{fig_program_architecture.pdf}
+    \caption{Flowchart of the FRI/FRII analysis pipeline. The four stages correspond to the input data, morphology and centreline measurements, physical data with source-level quality checks, and the matched outputs. The bottom band records the sample-filtering audit: the initial 495 FRI and 924 FRII candidates, the 68 FRI and 43 FRII sources removed by visual inspection, the 44 FRI and 297 FRII failures reported by the automated processing logs, and the final deduplicated samples of 379 FRIs and 547 FRIIs. The intermediate counts are diagnostic and can overlap, so they are not independent rejection counts.}
+    \label{fig:ProgramArchitecture}
+\end{figure*}
+
 \subsection{Radio-region extraction and principal direction}\label{sec:Section3_3}
 
 
@@ -236,17 +245,9 @@ We join the selected NED counterparts to catalogued coordinates and redshifts, a
 \subsection{Derived centreline and morphology measurements}
 \label{sec:derived_measurements}
 
-The post-processing measurements use the fitted-source tables and the saved centreline profiles rather than re-segmenting the images. We first construct \texttt{redshift\_limit.csv} by matching the source names in the FRI and FRII centreline tables to the adopted optical-counterpart catalogue. A source is retained in this limiting catalogue only when its ellipse parameters are present and its redshift is finite and satisfies $0\leq z\leq1$; sources listed in the manually inspected error directories are excluded. This file is used as the common filename-level restriction for the subsequent distributions and correlation analyses.
+The post-processing measurements use the fitted-source tables and the saved centreline profiles rather than re-segmenting the images. A source is retained in this limiting catalogue only when its ellipse parameters are present and its redshift is finite and satisfies $0\leq z\leq1$; sources listed in the manually inspected error directories are excluded. For each retained source, the centreline provides the signed distance from the host, and the corresponding intensity or flux profile.
 
-For each retained source, the centreline NPZ file provides the signed distance from the host, $x$, and the corresponding intensity or flux profile, $I(x)$. After sorting the samples by $x$, the profile is divided at the host into a central segment and two outer segments. The FRI implementation limits the two sides using the fitted ellipse semi-major axis when this quantity is available. The FRII implementation estimates the usable extent from the two side peaks, adopts the shorter side as the reference, and increases the paired extent until it approaches $0.9$ times the fitted major-axis scale; an upper limit of $1.5$ times that scale prevents an unphysical extrapolation. The central-to-lobe peak ratio and integrated-profile ratio are then calculated as
-\begin{equation}
-R_{\rm peak}=\frac{I_{\rm core,max}}{(I_{\rm left,max}+I_{\rm right,max})/2},
-\qquad
-R_{\rm int}=\frac{\int_{\rm core} I(x)\,dx}{\int_{\rm lobes} I(x)\,dx}.
-\end{equation}
-Only profiles with the required finite segments are used for these quantities. The tabulated $r_s$ value is read directly from the centreline catalogue and is not re-normalized by the ellipse major axis in the later distribution analysis.
-
-The ellipse axial ratio is calculated from the fitted ellipse parameters as $q=b/a$, where $a=\max(a_1,a_2)$ and $b=\min(a_1,a_2)$. The projected maximum physical scale is obtained from the same semi-major-axis parameter using the FIRST scale factor of $1.8$ arcsec per image unit and a flat $\Lambda$CDM cosmology with $H_0=67.74\ {\rm km\ s^{-1}\ Mpc^{-1}}$ and $\Omega_{\rm m}=0.3089$:
+The ellipse axial ratio is calculated from the fitted ellipse parameters as $q=b/a$, where $a=\max(a_1,a_2)$ and $b=\min(a_1,a_2)$. The projected maximum physical scale is obtained from the same semi-major-axis parameter using the FIRST scale factor of $1.8$ arcsec per image unit and a flat $\Lambda$CDM cosmology :
 \begin{equation}
 D_{\rm max}=D_{\rm A}(z)\,(1.8a)\,\frac{\pi}{180\times3600},
 \end{equation}
@@ -257,9 +258,9 @@ Black-hole mass, stellar mass, radio luminosity, physical scale, axial ratio, an
 \subsection{Sample filtering and final analysis samples}
 \label{sec:sample_filtering}
 
-The initial processing lists contained 495 FRI and 924 FRII candidates. Quality control was applied in successive, source-level steps. First, visual inspection removed 68 FRI sources in \texttt{FRIs\_Error} and 43 FRII sources in \texttt{FRIIs\_Error}. Second, the automated centreline programs rejected sources for invalid or missing redshifts, empty PCA-selected contours, incompatible connected components or optical-centre locations, insufficient PCA pixels, failed FRII hotspot/GMM selection, too few bright pixels, and unsuccessful ellipse fitting. The corresponding failure logs report 44 failed FRI sources and 297 failed FRII sources among the 495 and 924 input candidates, respectively. These log entries are diagnostic records: several failure messages can refer to one source, and the manual and automatic lists can overlap. They must therefore not be summed as independent rejection counts.
+The initial processing lists contained 495 FRI and 924 FRII candidates. Quality control was applied in successive, source-level steps. First, visual inspection removed 68 FRI sources and 43 FRII sources. Second, the automated centreline programs rejected sources for invalid or missing redshifts, incompatible connected components or optical-centre locations, overly compact structure, failed FRII hotspot/GMM selection, too few bright pixels, and unsuccessful ellipse fitting. The corresponding failure logs report 44 failed FRI sources and 297 failed FRII sources among the 495 and 924 input candidates, respectively. 
 
-After applying the combined source-level quality-control selection, including filename normalization, the error-directory and automated-processing restrictions, valid-redshift and ellipse-parameter requirements, and construction of the required cross-matched data products, the working morphology samples contain 379 FRIs and 547 FRIIs. Relative to the initial lists, this corresponds to total reductions of 116 FRI sources ($495-379$) and 377 FRII sources ($924-547$). The totals describe the final deduplicated analysis selection, whereas the failure logs provide the reasons for rejection at intermediate processing stages. Subsequent mass, luminosity, scale, axial-ratio, knot, and centreline-ratio plots can contain fewer sources because each statistic additionally requires the relevant measurement to be present and finite.
+After applying the combined source-level quality-control selection, including the error-directory and automated-processing restrictions, valid-redshift (Less than 1) and ellipse-parameter requirements, and construction of the required cross-matched data products, the working morphology samples contain 379 FRIs and 547 FRIIs. Relative to the initial lists, this corresponds to total reductions of 116 FRI sources ($495-379$) and 377 FRII sources ($924-547$).
 
 \begin{figure*}[!htbp]
     \centering

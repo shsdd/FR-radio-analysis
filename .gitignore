@@ -20,3 +20,5 @@
 
 # Generated PDF
 *.pdf
+# Standalone vector figures compiled from committed TikZ sources
+!fig_program_architecture.pdf
